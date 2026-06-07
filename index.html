@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DarkTech Manager</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d1117">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-primary {
+            background-color: #58a6ff;
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: #1f6feb;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+        }
+        .input-field {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+        }
+        .input-field:focus {
+            border-color: #58a6ff;
+            outline: none;
+        }
+        
+        /* Layout Desktop: Sidebar Fixa */
+        @media (min-width: 1024px) {
+            .app-container {
+                display: flex;
+            }
+            .sidebar {
+                width: 260px;
+                height: 100vh;
+                position: fixed;
+                left: 0;
+                top: 0;
+                background-color: #161b22;
+                border-right: 1px solid #30363d;
+                display: flex;
+                flex-direction: column;
+                padding: 1.5rem;
+                z-index: 50;
+            }
+            main {
+                flex: 1;
+                margin-left: 260px;
+                padding: 2.5rem;
+                min-height: 100vh;
+            }
+            .nav-mobile { display: none; }
+        }
+
+        /* Layout Mobile: Apenas Bottom Nav */
+        @media (max-width: 1023px) {
+            .sidebar { display: none !important; }
+            .nav-mobile { 
+                display: flex; 
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: #161b22;
+                border-top: 1px solid #30363d;
+                justify-content: space-around;
+                padding: 0.75rem;
+                z-index: 50;
+            }
+            main { 
+                padding: 1rem;
+                padding-bottom: 80px;
+            }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            color: #8b949e;
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: #21262d;
+            color: #58a6ff;
+        }
+        .nav-item svg {
+            margin-right: 0.75rem;
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans">
+    <div class="app-container">
+        <!-- Sidebar (Apenas Desktop) -->
+        <aside class="sidebar">
+            <div class="mb-10">
+                <h1 class="text-xl font-bold text-[#58a6ff] flex items-center">
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    DarkTech
+                </h1>
+            </div>
+            
+            <nav class="flex-1 space-y-2">
+                <button onclick="showSection('dashboard')" class="nav-item active" id="btn-dash">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    Dashboard
+                </button>
+                <button onclick="showSection('transacoes')" class="nav-item" id="btn-trans">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Livro Caixa
+                </button>
+                <button onclick="showSection('pdv')" class="nav-item" id="btn-pdv">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    PDV (Venda Rápida)
+                </button>
+                <button onclick="showSection('estoque')" class="nav-item" id="btn-est">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    Estoque
+                </button>
+            </nav>
+
+            <div class="mt-auto pt-6 border-t border-[#30363d]">
+                <p class="text-xs text-gray-500">v2.2.1 Stable</p>
+            </div>
+        </aside>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="nav-mobile">
+            <button onclick="showSection('dashboard')" class="flex flex-col items-center text-xs text-[#58a6ff]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>Home</span>
+            </button>
+            <button onclick="showSection('transacoes')" class="flex flex-col items-center text-xs text-[#8b949e]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span>Caixa</span>
+            </button>
+            <button onclick="showSection('pdv')" class="flex flex-col items-center text-xs text-[#8b949e]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                <span>PDV</span>
+            </button>
+            <button onclick="showSection('estoque')" class="flex flex-col items-center text-xs text-[#8b949e]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                <span>Estoque</span>
+            </button>
+        </nav>
+
+        <main>
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="space-y-8">
+                <div>
+                    <h2 class="text-3xl font-bold">Dashboard</h2>
+                    <p class="text-gray-500">Visão geral do seu negócio.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="text-gray-400 text-sm font-medium uppercase tracking-wider">Saldo Total</h3>
+                        <p id="saldo-total" class="text-3xl font-bold text-green-400 mt-2">R$ 0,00</p>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="text-gray-400 text-sm font-medium uppercase tracking-wider">Lucro Estimado</h3>
+                        <p id="lucro-mes" class="text-3xl font-bold text-[#58a6ff] mt-2">R$ 0,00</p>
+                    </div>
+                    <div class="card p-6 rounded-xl sm:col-span-2 lg:col-span-1">
+                        <h3 class="text-gray-400 text-sm font-medium uppercase tracking-wider">Alertas de Estoque</h3>
+                        <ul id="alertas-estoque" class="mt-3 text-red-400 text-sm space-y-2"></ul>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                    <button onclick="exportPDF()" class="btn-primary px-6 py-3 rounded-xl font-bold flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        Relatório PDF
+                    </button>
+                    <button onclick="exportExcel()" class="btn-primary px-6 py-3 rounded-xl font-bold flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Exportar Excel
+                    </button>
+                </div>
+            </section>
+
+            <!-- Transações Section (Livro Caixa) -->
+            <section id="transacoes" class="hidden space-y-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-3xl font-bold">Livro Caixa</h2>
+                    <button onclick="openModal('modal-transacao')" class="btn-primary px-6 py-2 rounded-xl font-bold">+ Nova Despesa</button>
+                </div>
+                <div class="card overflow-hidden rounded-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left min-w-[700px]">
+                            <thead class="border-b border-[#30363d] bg-[#0d1117]">
+                                <tr>
+                                    <th class="p-5 text-gray-400 font-medium">Data</th>
+                                    <th class="p-5 text-gray-400 font-medium">Tipo</th>
+                                    <th class="p-5 text-gray-400 font-medium">Descrição</th>
+                                    <th class="p-5 text-gray-400 font-medium text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-transacoes"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PDV Section -->
+            <section id="pdv" class="hidden space-y-8">
+                <h2 class="text-3xl font-bold">Ponto de Venda</h2>
+                <div id="pdv-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </section>
+
+            <!-- Estoque Section -->
+            <section id="estoque" class="hidden space-y-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-3xl font-bold">Estoque</h2>
+                    <button onclick="openModal('modal-produto')" class="btn-primary px-6 py-2 rounded-xl font-bold">+ Novo Produto</button>
+                </div>
+                <div class="card overflow-hidden rounded-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left min-w-[700px]">
+                            <thead class="border-b border-[#30363d] bg-[#0d1117]">
+                                <tr>
+                                    <th class="p-5 text-gray-400 font-medium">Produto</th>
+                                    <th class="p-5 text-gray-400 font-medium">Custo</th>
+                                    <th class="p-5 text-gray-400 font-medium">Venda</th>
+                                    <th class="p-5 text-gray-400 font-medium">Qtd</th>
+                                    <th class="p-5 text-gray-400 font-medium text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-estoque"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- PWA Install Popup -->
+    <div id="install-popup" class="hidden fixed bottom-24 left-4 right-4 lg:bottom-8 lg:right-8 lg:left-auto z-[100]">
+        <div class="card p-5 rounded-2xl shadow-2xl flex items-center justify-between space-x-6 border-[#58a6ff] max-w-sm">
+            <div class="flex items-center space-x-4">
+                <div class="bg-[#58a6ff] p-3 rounded-xl">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </div>
+                <div>
+                    <p class="font-bold">Instalar DarkTech</p>
+                    <p class="text-xs text-gray-400">Acesse como um aplicativo nativo.</p>
+                </div>
+            </div>
+            <div class="flex flex-col space-y-2">
+                <button id="install-button" class="btn-primary text-xs px-4 py-2 rounded-lg font-bold">Instalar</button>
+                <button onclick="closeInstallPopup()" class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Depois</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modais -->
+    <div id="modal-produto" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+        <div class="card p-8 rounded-2xl w-full max-w-md shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6">Novo Produto</h3>
+            <form id="form-produto" class="space-y-5">
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Nome</label>
+                    <input type="text" id="prod-nome" class="input-field w-full p-3 rounded-xl" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Custo (R$)</label>
+                        <input type="number" step="0.01" id="prod-custo" class="input-field w-full p-3 rounded-xl" required>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Venda (R$)</label>
+                        <input type="number" step="0.01" id="prod-venda" class="input-field w-full p-3 rounded-xl" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Qtd Inicial</label>
+                        <input type="number" id="prod-qtd" class="input-field w-full p-3 rounded-xl" required>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Alerta Mín</label>
+                        <input type="number" id="prod-alerta" class="input-field w-full p-3 rounded-xl" required>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" onclick="closeModal('modal-produto')" class="text-gray-400 font-bold">Cancelar</button>
+                    <button type="submit" class="btn-primary px-8 py-3 rounded-xl font-bold">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-transacao" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+        <div class="card p-8 rounded-2xl w-full max-w-md shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6">Registrar Despesa</h3>
+            <form id="form-transacao" class="space-y-5">
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Descrição</label>
+                    <input type="text" id="trans-desc" class="input-field w-full p-3 rounded-xl" required>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Valor (R$)</label>
+                    <input type="number" step="0.01" id="trans-valor" class="input-field w-full p-3 rounded-xl" required>
+                </div>
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" onclick="closeModal('modal-transacao')" class="text-gray-400 font-bold">Cancelar</button>
+                    <button type="submit" class="btn-primary px-8 py-3 rounded-xl font-bold">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-entrada-estoque" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+        <div class="card p-8 rounded-2xl w-full max-w-md shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6">Entrada de Estoque</h3>
+            <form id="form-entrada-estoque" class="space-y-5">
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Quantidade</label>
+                    <input type="number" id="entrada-qtd" class="input-field w-full p-3 rounded-xl" required>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-bold mb-1 block">Custo Unitário (R$)</label>
+                    <input type="number" step="0.01" id="entrada-custo" class="input-field w-full p-3 rounded-xl" required>
+                </div>
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" onclick="closeModal('modal-entrada-estoque')" class="text-gray-400 font-bold">Cancelar</button>
+                    <button type="submit" class="btn-primary px-8 py-3 rounded-xl font-bold">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

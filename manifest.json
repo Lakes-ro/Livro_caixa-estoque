@@ -1,0 +1,21 @@
+{
+  "name": "DarkTech Manager",
+  "short_name": "DarkTech",
+  "description": "Livro Caixa + Controle de Estoque Integrado",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#58a6ff",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2652/2652218.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2652/2652218.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
